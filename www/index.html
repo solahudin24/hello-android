@@ -16,7 +16,7 @@
         .location-badge {
             display: inline-block; background: rgba(59, 130, 246, 0.15); color: #60a5fa;
             padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 500;
-            border: 1px solid rgba(59, 130, 246, 0.3); margin-bottom: 12px;
+            border: 1px solid rgba(59, 130, 246, 0.3); margin-bottom: 12px; cursor: pointer;
         }
         .current-date { font-size: 1rem; color: #94a3b8; margin-bottom: 4px; }
         .current-time { font-size: 3.5rem; font-weight: 800; letter-spacing: -1px; color: #ffffff; }
@@ -46,7 +46,7 @@
 </head>
 <body>
     <div class="header">
-        <div class="location-badge" id="locationInfo">Mendeteksi Lokasi...</div>
+        <div class="location-badge" id="locationInfo" onclick="requestGPS()">📍 Ketuk untuk Aktifkan GPS</div>
         <div class="current-date" id="currentDate">Memuat Tanggal...</div>
         <div class="current-time" id="currentTime">00:00:00</div>
     </div>
@@ -56,19 +56,21 @@
         <div class="countdown-value" id="countdownValue">--:--:--</div>
     </div>
     <div class="prayer-list" id="prayerList"></div>
-    <div class="footer">Jadwal Sholat Sola &bull; Auto-GPS API</div>
+    <div class="footer">Jadwal Sholat Sola &bull; Live GPS Mode</div>
 
     <script>
         let prayerData = [
             { name: 'Subuh', time: '--:--' }, { name: 'Zuhur', time: '--:--' },
             { name: 'Ashar', time: '--:--' }, { name: 'Maghrib', time: '--:--' }, { name: 'Isya', time: '--:--' }
         ];
+
         function updateClock() {
             const now = new Date();
             document.getElementById('currentTime').textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
             document.getElementById('currentDate').textContent = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             renderUI();
         }
+
         function renderUI() {
             const now = new Date();
             const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -93,26 +95,49 @@
             });
             document.getElementById('prayerList').innerHTML = html;
         }
-        async function fetchTimes(lat, lon, name) {
+
+        async function fetchTimes(lat, lon, label) {
             try {
+                // Method 20 = Standar Kemenag RI
                 const res = await fetch(`https://api.aladhan.com/v1/timings/${Math.floor(Date.now() / 1000)}?latitude=${lat}&longitude=${lon}&method=20`);
                 const data = await res.json();
                 if (data.code === 200) {
                     const t = data.data.timings;
-                    prayerData = [{ name: 'Subuh', time: t.Fajr }, { name: 'Zuhur', time: t.Dhuhr }, { name: 'Ashar', time: t.Asr }, { name: 'Maghrib', time: t.Maghrib }, { name: 'Isya', time: t.Isha }];
-                    document.getElementById('locationInfo').textContent = `📍 ${name}`;
+                    prayerData = [
+                        { name: 'Subuh', time: t.Fajr }, 
+                        { name: 'Zuhur', time: t.Dhuhr }, 
+                        { name: 'Ashar', time: t.Asr }, 
+                        { name: 'Maghrib', time: t.Maghrib }, 
+                        { name: 'Isya', time: t.Isha }
+                    ];
+                    document.getElementById('locationInfo').textContent = `📍 ${label} (${lat.toFixed(2)}, ${lon.toFixed(2)})`;
                 }
-            } catch(e) { document.getElementById('locationInfo').textContent = "⚠️ Gagal memuat"; }
+            } catch(e) { 
+                document.getElementById('locationInfo').textContent = "⚠️ Gagal ambil jadwal API"; 
+            }
         }
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(p => fetchTimes(p.coords.latitude, p.coords.longitude, "GPS Aktif"), async () => {
-                try {
-                    const ip = await (await fetch('https://ipapi.co/json/')).json();
-                    fetchTimes(ip.latitude, ip.longitude, ip.city || "Indonesia");
-                } catch(e) { fetchTimes(-6.3265, 108.2200, "Tasikmalaya"); }
-            }, {timeout: 10000});
-        } else { fetchTimes(-6.3265, 108.2200, "Tasikmalaya"); }
-        setInterval(updateClock, 1000); updateClock();
+
+        function requestGPS() {
+            if (navigator.geolocation) {
+                document.getElementById('locationInfo').textContent = "🔄 Mengambil titik GPS...";
+                navigator.geolocation.getCurrentPosition(
+                    p => {
+                        fetchTimes(p.coords.latitude, p.coords.longitude, "GPS Aktif");
+                    },
+                    err => {
+                        document.getElementById('locationInfo').textContent = "⚠️ GPS Ditolak/Mati (Ketuk ulang)";
+                        alert("Pastikan izin lokasi/GPS HP aktif untuk aplikasi ini.");
+                    },
+                    { timeout: 10000, enableHighAccuracy: true }
+                );
+            } else {
+                alert("Geolocation tidak didukung perangkat ini.");
+            }
+        }
+
+        setInterval(updateClock, 1000); 
+        requestGPS(); // Otomatis minta GPS saat aplikasi dibuka
+        updateClock();
     </script>
 </body>
 </html>
