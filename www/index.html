@@ -15,7 +15,7 @@
         .header { text-align: center; margin-bottom: 20px; }
         .location-badge {
             display: inline-block; background: rgba(59, 130, 246, 0.15); color: #60a5fa;
-            padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 500;
+            padding: 6px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: 500;
             border: 1px solid rgba(59, 130, 246, 0.3); margin-bottom: 12px; cursor: pointer;
         }
         .current-date { font-size: 1rem; color: #94a3b8; margin-bottom: 4px; }
@@ -46,7 +46,7 @@
 </head>
 <body>
     <div class="header">
-        <div class="location-badge" id="locationInfo" onclick="requestGPS()">📍 Ketuk untuk Aktifkan GPS</div>
+        <div class="location-badge" id="locationInfo" onclick="requestGPS()">📍 Mencari Lokasi GPS...</div>
         <div class="current-date" id="currentDate">Memuat Tanggal...</div>
         <div class="current-time" id="currentTime">00:00:00</div>
     </div>
@@ -96,9 +96,26 @@
             document.getElementById('prayerList').innerHTML = html;
         }
 
-        async function fetchTimes(lat, lon, label) {
+        async function fetchLocationName(lat, lon) {
             try {
-                // Method 20 = Standar Kemenag RI
+                // Ambil nama wilayah/kabupaten otomatis dari koordinat GPS
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`);
+                const data = await res.json();
+                const address = data.address;
+                const areaName = address.city || address.town || address.village || address.county || "Lokasi Anda";
+                return areaName;
+            } catch(e) {
+                return "Garut / Sekitarnya";
+            }
+        }
+
+        async function fetchTimes(lat, lon) {
+            try {
+                // Tampilkan nama lokasi sementara
+                const placeName = await fetchLocationName(lat, lon);
+                document.getElementById('locationInfo').textContent = `📍 ${placeName}`;
+
+                // Method 20 = Kemenag RI
                 const res = await fetch(`https://api.aladhan.com/v1/timings/${Math.floor(Date.now() / 1000)}?latitude=${lat}&longitude=${lon}&method=20`);
                 const data = await res.json();
                 if (data.code === 200) {
@@ -110,33 +127,30 @@
                         { name: 'Maghrib', time: t.Maghrib }, 
                         { name: 'Isya', time: t.Isha }
                     ];
-                    document.getElementById('locationInfo').textContent = `📍 ${label} (${lat.toFixed(2)}, ${lon.toFixed(2)})`;
+                    renderUI();
                 }
             } catch(e) { 
-                document.getElementById('locationInfo').textContent = "⚠️ Gagal ambil jadwal API"; 
+                document.getElementById('locationInfo').textContent = "⚠️ Gagal memuat jadwal"; 
             }
         }
 
         function requestGPS() {
             if (navigator.geolocation) {
-                document.getElementById('locationInfo').textContent = "🔄 Mengambil titik GPS...";
+                document.getElementById('locationInfo').textContent = "🔄 Mendeteksi GPS HP...";
                 navigator.geolocation.getCurrentPosition(
                     p => {
-                        fetchTimes(p.coords.latitude, p.coords.longitude, "GPS Aktif");
+                        fetchTimes(p.coords.latitude, p.coords.longitude);
                     },
                     err => {
-                        document.getElementById('locationInfo').textContent = "⚠️ GPS Ditolak/Mati (Ketuk ulang)";
-                        alert("Pastikan izin lokasi/GPS HP aktif untuk aplikasi ini.");
+                        document.getElementById('locationInfo').textContent = "⚠️ GPS Mati (Ketuk untuk Ulang)";
                     },
                     { timeout: 10000, enableHighAccuracy: true }
                 );
-            } else {
-                alert("Geolocation tidak didukung perangkat ini.");
             }
         }
 
         setInterval(updateClock, 1000); 
-        requestGPS(); // Otomatis minta GPS saat aplikasi dibuka
+        requestGPS();
         updateClock();
     </script>
 </body>
