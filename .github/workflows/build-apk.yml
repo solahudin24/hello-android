@@ -1,1 +1,24 @@
+name: Build Simple APK
 
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Buat File APK Simulasi (Hello World)
+      run: |
+        mkdir -p output
+        echo "Halo Sola! Ini file output APK sederhana dari GitHub Actions." > output/hello_world.txt
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: apk-hello-world
+        path: output/
+        
