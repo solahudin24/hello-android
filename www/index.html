@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Jadwal Sholat Sola</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+        body {
+            background-color: #0b0f19; color: #ffffff; min-height: 100vh;
+            display: flex; flex-direction: column; justify-content: space-between; padding: 24px 20px;
+            background-image: radial-gradient(circle at 90% 10%, rgba(153, 27, 27, 0.2) 0%, transparent 40%),
+                              radial-gradient(circle at 10% 90%, rgba(30, 58, 138, 0.3) 0%, transparent 50%);
+        }
+        .header { text-align: center; margin-bottom: 20px; }
+        .location-badge {
+            display: inline-block; background: rgba(59, 130, 246, 0.15); color: #60a5fa;
+            padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 500;
+            border: 1px solid rgba(59, 130, 246, 0.3); margin-bottom: 12px;
+        }
+        .current-date { font-size: 1rem; color: #94a3b8; margin-bottom: 4px; }
+        .current-time { font-size: 3.5rem; font-weight: 800; letter-spacing: -1px; color: #ffffff; }
+        .countdown-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
+            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 20px;
+            text-align: center; margin-bottom: 20px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+        .countdown-label { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; margin-bottom: 6px; }
+        .countdown-title { font-size: 1.3rem; font-weight: 700; color: #f8fafc; margin-bottom: 10px; }
+        .countdown-value { font-size: 2.5rem; font-weight: 800; color: #38bdf8; font-variant-numeric: tabular-nums; }
+        .prayer-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .prayer-item {
+            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 16px 20px; border-radius: 14px;
+        }
+        .prayer-item.active {
+            background: linear-gradient(135deg, rgba(153, 27, 27, 0.7), rgba(127, 29, 29, 0.8));
+            border-color: rgba(239, 68, 68, 0.4); box-shadow: 0 4px 15px rgba(185, 28, 28, 0.3);
+        }
+        .prayer-name { font-size: 1.05rem; font-weight: 600; color: #cbd5e1; }
+        .prayer-item.active .prayer-name { color: #fecaca; }
+        .prayer-time { font-size: 1.25rem; font-weight: 700; color: #ffffff; font-variant-numeric: tabular-nums; }
+        .footer { text-align: center; font-size: 0.8rem; color: #64748b; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="location-badge" id="locationInfo">Mendeteksi Lokasi...</div>
+        <div class="current-date" id="currentDate">Memuat Tanggal...</div>
+        <div class="current-time" id="currentTime">00:00:00</div>
+    </div>
+    <div class="countdown-card">
+        <div class="countdown-label">Menuju Waktu Sholat Berikutnya</div>
+        <div class="countdown-title" id="nextPrayerName">-</div>
+        <div class="countdown-value" id="countdownValue">--:--:--</div>
+    </div>
+    <div class="prayer-list" id="prayerList"></div>
+    <div class="footer">Jadwal Sholat Sola &bull; Auto-GPS API</div>
+
+    <script>
+        let prayerData = [
+            { name: 'Subuh', time: '--:--' }, { name: 'Zuhur', time: '--:--' },
+            { name: 'Ashar', time: '--:--' }, { name: 'Maghrib', time: '--:--' }, { name: 'Isya', time: '--:--' }
+        ];
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            renderUI();
+        }
+        function renderUI() {
+            const now = new Date();
+            const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            let activeIndex = 0;
+            for (let i = 0; i < prayerData.length; i++) {
+                if (prayerData[i].time !== '--:--' && currentTimeStr < prayerData[i].time) { activeIndex = i; break; }
+                if (i === prayerData.length - 1) activeIndex = 0;
+            }
+            document.getElementById('nextPrayerName').textContent = prayerData[activeIndex].name;
+            let countdownStr = "--:--:--";
+            if (prayerData[activeIndex].time !== '--:--') {
+                const [tH, tM] = prayerData[activeIndex].time.split(':').map(Number);
+                const target = new Date(); target.setHours(tH, tM, 0);
+                if (target <= now) target.setDate(target.getDate() + 1);
+                const diff = target - now;
+                countdownStr = `${String(Math.floor((diff%86400000)/3600000)).padStart(2,'0')}:${String(Math.floor((diff%3600000)/60000)).padStart(2,'0')}:${String(Math.floor((diff%60000)/1000)).padStart(2,'0')}`;
+            }
+            document.getElementById('countdownValue').textContent = countdownStr;
+            let html = '';
+            prayerData.forEach((item, idx) => {
+                html += `<div class="prayer-item ${idx === activeIndex ? 'active' : ''}"><div class="prayer-name">${item.name}</div><div class="prayer-time">${item.time}</div></div>`;
+            });
+            document.getElementById('prayerList').innerHTML = html;
+        }
+        async function fetchTimes(lat, lon, name) {
+            try {
+                const res = await fetch(`https://api.aladhan.com/v1/timings/${Math.floor(Date.now() / 1000)}?latitude=${lat}&longitude=${lon}&method=20`);
+                const data = await res.json();
+                if (data.code === 200) {
+                    const t = data.data.timings;
+                    prayerData = [{ name: 'Subuh', time: t.Fajr }, { name: 'Zuhur', time: t.Dhuhr }, { name: 'Ashar', time: t.Asr }, { name: 'Maghrib', time: t.Maghrib }, { name: 'Isya', time: t.Isha }];
+                    document.getElementById('locationInfo').textContent = `📍 ${name}`;
+                }
+            } catch(e) { document.getElementById('locationInfo').textContent = "⚠️ Gagal memuat"; }
+        }
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(p => fetchTimes(p.coords.latitude, p.coords.longitude, "GPS Aktif"), async () => {
+                try {
+                    const ip = await (await fetch('https://ipapi.co/json/')).json();
+                    fetchTimes(ip.latitude, ip.longitude, ip.city || "Indonesia");
+                } catch(e) { fetchTimes(-6.3265, 108.2200, "Tasikmalaya"); }
+            }, {timeout: 10000});
+        } else { fetchTimes(-6.3265, 108.2200, "Tasikmalaya"); }
+        setInterval(updateClock, 1000); updateClock();
+    </script>
+</body>
+</html>
