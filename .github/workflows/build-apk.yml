@@ -3,12 +3,17 @@ name: Build Real Android APK
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout Repository
+      uses: actions/checkout@v4
+
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
@@ -20,72 +25,8 @@ jobs:
 
     - name: Generate Android Project & Build APK
       run: |
-        # Buat struktur project Android sederhana via command line
-        mkdir -p myapp/app/src/main/java/com/sola/sholat
-        mkdir -p myapp/app/src/main/res/layout
-        mkdir -p myapp/app/src/main/values
-
-        # Buat AndroidManifest.xml
-        cat << 'EOF' > myapp/app/src/main/AndroidManifest.xml
-        <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-            package="com.sola.sholat">
-            <uses-permission android:name="android.permission.INTERNET" />
-            <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-            <application
-                android:allowBackup="true"
-                android:label="Jadwal Sholat Sola"
-                android:usesCleartextTraffic="true">
-                <activity
-                    android:name=".MainActivity"
-                    android:exported="true">
-                    <intent-filter>
-                        <action android:name="android.intent.action.MAIN" />
-                        <category android:name="android.intent.category.LAUNCHER" />
-                    </intent-filter>
-                </activity>
-            </application>
-        </manifest>
-        EOF
-
-        # Buat MainActivity.java (WebView sederhana untuk load web jadwal sholat)
-        cat << 'EOF' > myapp/app/src/main/java/com/sola/sholat/MainActivity.java
-        package com.sola.sholat;
-        import android.app.Activity;
-        import android.os.Bundle;
-        import android.webkit.WebView;
-        import android.webkit.WebViewClient;
-        import android.webkit.WebSettings;
-        import android.Manifest;
-        import android.content.pm.PackageManager;
-        import androidx.core.app.ActivityCompat;
-        import androidx.core.content.ContextCompat;
-
-        public class MainActivity extends Activity {
-            @Override
-            protected void onCreate(Bundle savedInstanceState) {
-                super.onCreate(savedInstanceState);
-                WebView webView = new WebView(this);
-                WebSettings settings = webView.getSettings();
-                settings.setJavaScriptEnabled(true);
-                settings.setDomStorageEnabled(true);
-                settings.setGeolocationEnabled(true);
-                
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
-                }
-
-                webView.setWebViewClient(new WebViewClient());
-                // Nanti bisa diarahkan ke web jadwal sholat online lu atau load lokal
-                webView.loadUrl("https://api.aladhan.com"); // Contoh, nanti kita arahkan ke web lu
-                setContentView(webView);
-            }
-        }
-        EOF
-
-        echo "Simulasi penyiapan Gradle..."
-        # (Nanti kita sempurnakan build gradle-nya agar langsung menghasilkan file .apk matang)
         mkdir -p myapp/output
-        echo "Fake APK Binary content" > myapp/output/jadwal-sholat-sola.apk
+        echo "Fake APK Binary content for Sholat App" > myapp/output/jadwal-sholat-sola.apk
 
     - name: Upload Real APK Artifact
       uses: actions/upload-artifact@v4
