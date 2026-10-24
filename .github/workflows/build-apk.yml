@@ -1,4 +1,4 @@
-name: Build Real Android APK
+name: Build Sholat Mobile APK
 
 on:
   workflow_dispatch:
@@ -14,20 +14,33 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Buat Output APK Jadwal Sholat
+    - name: Install Cordova & Build Android APK
       run: |
-        mkdir -p myapp/output
-        # File APK simulasi siap download untuk dicoba di HP
-        echo "Aplikasi Jadwal Sholat Sola WebView" > myapp/output/jadwal-sholat-sola.apk
+        npm install -g cordova
+        cordova create sholatApp com.sola.sholatapp SholatSola
+        cd sholatApp
+        cordova platform add android
+        
+        # Timpa folder www default dengan file web jadwal sholat buatan kita
+        rm -rf www/*
+        cp -r ../www/* www/
+        
+        # Build APK Debug
+        cordova build android --debug
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: app-jadwal-sholat
-        path: myapp/output/
+        name: JadwalSholatSola-APK
+        path: sholatApp/platforms/android/app/build/outputs/apk/debug/app-debug.apk
